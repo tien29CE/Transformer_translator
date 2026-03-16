@@ -57,7 +57,7 @@ def translate(sentence: str):
         # Generate the translation word by word
         while decoder_input.size(1) < seq_len:
             # build mask for target and calculate output
-            decoder_mask = torch.triu(torch.ones((1, decoder_input.size(1), decoder_input.size(1))), diagonal=1).type(torch.int).type_as(source_mask).to(device)
+            decoder_mask = torch.tril(torch.ones((1, decoder_input.size(1), decoder_input.size(1)))).type(torch.int).type_as(source_mask).to(device)
             out = model.decode(encoder_output, source_mask, decoder_input, decoder_mask)
 
             # project next token

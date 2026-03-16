@@ -81,17 +81,14 @@ class MultiheadAttentionBlock(nn.Module):
         self.drop_out = nn.Dropout(drop_out)
 
     @staticmethod
-    def attention(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, mask, drop_out: nn.Dropout) -> tuple[torch.Tensor, torch.Tensor]:
+    def attention(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, mask) -> tuple[torch.Tensor, torch.Tensor]:
         d_k = query.shape[-1]
 
         # (Batch, h, Seq_len, d_k) ---> (Batch, h, seq_len, seq_len)
         attention_scores = query @ key.transpose(-2, -1) / math.sqrt(d_k)
         if mask is not None:
-            attention_scores.masked_fill(mask == 0, -1e9)
+            attention_scores.masked_fill_(mask == 0, float('-inf'))
         attention_scores = attention_scores.softmax(dim = -1) # (Batch, h, seq_len, seq_len)
-
-        if drop_out is None:
-            attention_scores = drop_out(attention_scores)
 
         return (attention_scores @ value), attention_scores
 
@@ -105,7 +102,7 @@ class MultiheadAttentionBlock(nn.Module):
         key = key.view(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1, 2)
         value = value.view(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1, 2)
 
-        x, self.attention_scores = MultiheadAttentionBlock.attention(query, key, value, mask, self.drop_out)
+        x, self.attention_scores = MultiheadAttentionBlock.attention(query, key, value, mask)
 
         # (Batch, h, seq_len, d_k) ---> (Batch, Seq_len, h, d_k) ---> (Batch, seq_len, d_model)
         x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.h * self.d_k)
